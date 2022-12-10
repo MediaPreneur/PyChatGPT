@@ -9,7 +9,9 @@ class Spinner:
     __default_spinner_symbols_list = ['|-----|', '|#----|', '|-#---|', '|--#--|', '|---#-|', '|----#|']
 
     def __init__(self, spinner_symbols_list: [str] = None):
-        spinner_symbols_list = spinner_symbols_list if spinner_symbols_list else Spinner.__default_spinner_symbols_list
+        spinner_symbols_list = (
+            spinner_symbols_list or Spinner.__default_spinner_symbols_list
+        )
         self.__screen_lock = threading.Event()
         self.__spinner = cycle(spinner_symbols_list)
         self.__stop_event = False

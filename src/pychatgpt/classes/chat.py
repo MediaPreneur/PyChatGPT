@@ -48,12 +48,12 @@ def ask(
             {
                 "id": str(uuid.uuid4()),
                 "role": "user",
-                "content": {"content_type": "text", "parts": [str(prompt)]},
+                "content": {"content_type": "text", "parts": [prompt]},
             }
         ],
         "conversation_id": conversation_id,
         "parent_message_id": previous_convo_id,
-        "model": "text-davinci-002-render"
+        "model": "text-davinci-002-render",
     }
     try:
         session = requests.Session()
@@ -82,5 +82,5 @@ def ask(
         else:
             return f"[Status Code] {response.status_code} | [Response Text] {response.text}", None, None
     except Exception as e:
-        print(">> Error when calling OpenAI API: " + str(e))
+        print(f">> Error when calling OpenAI API: {str(e)}")
         return "400", None, None

@@ -79,13 +79,13 @@ class Chat:
                     self.options.id_log = "id_log.txt"
                     self._create_if_not_exists(self.options.id_log)
 
-            if self.options.proxies is not None:
-                if not isinstance(self.options.proxies, dict):
-                    if not isinstance(self.options.proxies, str):
-                        raise Exceptions.PyChatGPTException("Proxies must be a string or dictionary.")
-                    else:
-                        self.proxies = {"http": self.options.proxies, "https": self.options.proxies}
-                        self.log(f"{Fore.GREEN}>> Using proxies: True.")
+            if self.options.proxies is not None and not isinstance(
+                self.options.proxies, dict
+            ):
+                if not isinstance(self.options.proxies, str):
+                    raise Exceptions.PyChatGPTException("Proxies must be a string or dictionary.")
+                self.proxies = {"http": self.options.proxies, "https": self.options.proxies}
+                self.log(f"{Fore.GREEN}>> Using proxies: True.")
 
             if self.options.track:
                 self.log(f"{Fore.GREEN}>> Tracking conversation enabled.")
@@ -151,9 +151,7 @@ class Chat:
         openai_auth = OpenAI.Auth(email_address=self.email, password=self.password, proxy=self.options.proxies)
         openai_auth.create_token()
 
-        # If after creating the token, it's still expired, then something went wrong.
-        is_still_expired = OpenAI.token_expired()
-        if is_still_expired:
+        if is_still_expired := OpenAI.token_expired():
             self.log(f"{Fore.RED}>> Failed to create access token.")
             return False
 
@@ -168,7 +166,7 @@ class Chat:
         if not isinstance(prompt, str):
             raise Exceptions.PyChatGPTException("Prompt must be a string.")
 
-        if len(prompt) == 0:
+        if not prompt:
             raise Exceptions.PyChatGPTException("Prompt cannot be empty.")
 
         if rep_queue is not None and not isinstance(rep_queue, Queue):
@@ -177,8 +175,7 @@ class Chat:
         # Check if the access token is expired
         if OpenAI.token_expired():
             self.log(f"{Fore.RED}>> Your access token is expired. {Fore.GREEN}Attempting to recreate it...")
-            did_create = self._create_access_token()
-            if did_create:
+            if did_create := self._create_access_token():
                 self.log(f"{Fore.GREEN}>> Successfully recreated access token.")
             else:
                 self.log(f"{Fore.RED}>> Failed to recreate access token.")
@@ -197,7 +194,7 @@ class Chat:
         if rep_queue is not None:
             rep_queue.put((prompt, answer))
 
-        if answer == "400" or answer == "401":
+        if answer in ["400", "401"]:
             self.log(f"{Fore.RED}>> Failed to get a response from the API.")
             return None
 
@@ -205,8 +202,8 @@ class Chat:
         self.previous_convo_id = previous_convo
 
         if self.options.track:
-            self.__chat_history.append("You: " + prompt)
-            self.__chat_history.append("Chat GPT: " + answer)
+            self.__chat_history.append(f"You: {prompt}")
+            self.__chat_history.append(f"Chat GPT: {answer}")
             self.save_data()
 
 
@@ -241,8 +238,7 @@ class Chat:
         # Check if the access token is expired
         if OpenAI.token_expired():
             self.log(f"{Fore.RED}>> Your access token is expired. {Fore.GREEN}Attempting to recreate it...")
-            did_create = self._create_access_token()
-            if did_create:
+            if did_create := self._create_access_token():
                 self.log(f"{Fore.GREEN}>> Successfully recreated access token.")
             else:
                 self.log(f"{Fore.RED}>> Failed to recreate access token.")
@@ -264,7 +260,7 @@ class Chat:
                     break
 
                 spinner = Spinner.Spinner()
-                spinner.start(Fore.YELLOW + "Chat GPT is typing...")
+                spinner.start(f"{Fore.YELLOW}Chat GPT is typing...")
                 answer, previous_convo, convo_id = ChatHandler.ask(auth_token=access_token,
                                                                    prompt=prompt,
                                                                    conversation_id=self.conversation_id,
@@ -274,7 +270,7 @@ class Chat:
                 if rep_queue is not None:
                     rep_queue.put((prompt, answer))
 
-                if answer == "400" or answer == "401":
+                if answer in ["400", "401"]:
                     self.log(f"{Fore.RED}>> Failed to get a response from the API.")
                     return None
 
@@ -284,8 +280,8 @@ class Chat:
                 print(f"Chat GPT: {answer}")
 
                 if self.options.track:
-                    self.__chat_history.append("You: " + prompt)
-                    self.__chat_history.append("Chat GPT: " + answer)
+                    self.__chat_history.append(f"You: {prompt}")
+                    self.__chat_history.append(f"Chat GPT: {answer}")
 
             except KeyboardInterrupt:
                 print(f"{Fore.RED}>> Exiting...")
