@@ -42,13 +42,8 @@ def token_expired() -> bool:
         with open(path, 'r') as f:
             creds = json.load(f)
             expires_at = float(creds['expires_at'])
-            if time.time() > expires_at + 3600:
-                return True
-            else:
-                return False
-    except KeyError:
-        return True
-    except FileNotFoundError:
+            return time.time() > expires_at + 3600
+    except (KeyError, FileNotFoundError):
         return True
 
 
@@ -126,11 +121,12 @@ class Auth:
         print(f"{Fore.GREEN}[OpenAI][1] {Fore.WHITE}Making request to {url}")
 
         response = self.__session.get(url=url, headers=headers)
-        if response.status_code == 200:
-            print(f"{Fore.GREEN}[OpenAI][1] {Fore.WHITE}Request was " + Fore.GREEN + "successful")
-            self._part_two()
-        else:
+        if response.status_code != 200:
             raise Exceptions.Auth0Exception("Failed to make the first request, Try that again!")
+        print(
+            f"{Fore.GREEN}[OpenAI][1] {Fore.WHITE}Request was {Fore.GREEN}successful"
+        )
+        self._part_two()
 
     def _part_two(self):
         """
@@ -151,7 +147,9 @@ class Auth:
         print(f"{Fore.GREEN}[OpenAI][2] {Fore.WHITE}Grabbing CSRF token from {url}")
         response = self.__session.get(url=url, headers=headers)
         if response.status_code == 200 and 'json' in response.headers['Content-Type']:
-            print(f"{Fore.GREEN}[OpenAI][2] {Fore.WHITE}Request was " + Fore.GREEN + "successful")
+            print(
+                f"{Fore.GREEN}[OpenAI][2] {Fore.WHITE}Request was {Fore.GREEN}successful"
+            )
             csrf_token = response.json()["csrfToken"]
             print(f"{Fore.GREEN}[OpenAI][2] {Fore.WHITE}CSRF Token: {csrf_token}")
             self._part_three(token=csrf_token)
@@ -180,10 +178,14 @@ class Auth:
         print(f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Making request to {url}")
         response = self.__session.post(url=url, headers=headers, data=payload)
         if response.status_code == 200 and 'json' in response.headers['Content-Type']:
-            print(f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Request was " + Fore.GREEN + "successful")
+            print(
+                f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Request was {Fore.GREEN}successful"
+            )
             url = response.json()["url"]
             if url == "https://chat.openai.com/api/auth/error?error=OAuthSignin" or 'error' in url:
-                print(f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Error: " + Fore.RED + "You have been rate limited")
+                print(
+                    f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Error: {Fore.RED}You have been rate limited"
+                )
                 raise Exceptions.PyChatGPTException("You have been rate limited.")
 
             print(f"{Fore.GREEN}[OpenAI][3] {Fore.WHITE}Callback URL: {url}")
@@ -211,7 +213,9 @@ class Auth:
         print(f"{Fore.GREEN}[OpenAI][4] {Fore.WHITE}Making request to {url}")
         response = self.__session.get(url=url, headers=headers)
         if response.status_code == 302:
-            print(f"{Fore.GREEN}[OpenAI][4] {Fore.WHITE}Request was " + Fore.GREEN + "successful")
+            print(
+                f"{Fore.GREEN}[OpenAI][4] {Fore.WHITE}Request was {Fore.GREEN}successful"
+            )
             state = re.findall(r"state=(.*)", response.text)[0]
             state = state.split('"')[0]
             print(f"{Fore.GREEN}[OpenAI][4] {Fore.WHITE}Current State: {state}")
@@ -235,37 +239,38 @@ class Auth:
         }
         print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Making request to {url}")
         response = self.__session.get(url, headers=headers)
-        if response.status_code == 200:
-            print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Request was " + Fore.GREEN + "successful")
-            soup = BeautifulSoup(response.text, 'lxml')
-            if soup.find('img', alt='captcha'):
-                print(f"{Fore.RED}[OpenAI][5] {Fore.RED}Captcha detected")
-
-                svg_captcha = soup.find('img', alt='captcha')['src'].split(',')[1]
-                decoded_svg = base64.decodebytes(svg_captcha.encode("ascii"))
-
-                # Convert decoded svg to png
-                drawing = svg2rlg(BytesIO(decoded_svg))
-
-                # Better quality
-                renderPM.drawToFile(drawing, "captcha.png", fmt="PNG", dpi=300)
-                print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Captcha saved to {Fore.GREEN}captcha.png"
-                      + f" {Fore.WHITE}in the current directory")
-
-                # Wait.
-                captcha_input = input(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Please solve the captcha and "
-                                      f"press enter to continue: ")
-                if captcha_input:
-                    print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Continuing...")
-                    self._part_six(state=state, captcha=captcha_input)
-                else:
-                    raise Exceptions.PyChatGPTException("[OpenAI][5] You didn't enter anything.")
-
-            else:
-                print(f"{Fore.GREEN}[OpenAI][5] {Fore.GREEN}No captcha detected")
-                self._part_six(state=state, captcha=None)
-        else:
+        if response.status_code != 200:
             raise Exceptions.Auth0Exception("[OpenAI][5] Failed to make the request, Try that again!")
+        print(
+            f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Request was {Fore.GREEN}successful"
+        )
+        soup = BeautifulSoup(response.text, 'lxml')
+        if soup.find('img', alt='captcha'):
+            print(f"{Fore.RED}[OpenAI][5] {Fore.RED}Captcha detected")
+
+            svg_captcha = soup.find('img', alt='captcha')['src'].split(',')[1]
+            decoded_svg = base64.decodebytes(svg_captcha.encode("ascii"))
+
+            # Convert decoded svg to png
+            drawing = svg2rlg(BytesIO(decoded_svg))
+
+            # Better quality
+            renderPM.drawToFile(drawing, "captcha.png", fmt="PNG", dpi=300)
+            print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Captcha saved to {Fore.GREEN}captcha.png"
+                  + f" {Fore.WHITE}in the current directory")
+
+            if captcha_input := input(
+                f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Please solve the captcha and "
+                f"press enter to continue: "
+            ):
+                print(f"{Fore.GREEN}[OpenAI][5] {Fore.WHITE}Continuing...")
+                self._part_six(state=state, captcha=captcha_input)
+            else:
+                raise Exceptions.PyChatGPTException("[OpenAI][5] You didn't enter anything.")
+
+        else:
+            print(f"{Fore.GREEN}[OpenAI][5] {Fore.GREEN}No captcha detected")
+            self._part_six(state=state, captcha=None)
 
     def _part_six(self, state: str, captcha: str or None):
         """
@@ -324,7 +329,7 @@ class Auth:
         response = self.__session.post(url, headers=headers, data=payload)
         is_302 = response.status_code == 302
         if is_302:
-            print(f"{Fore.GREEN}[OpenAI][7] {Fore.WHITE}Password was " + Fore.GREEN + "correct")
+            print(f"{Fore.GREEN}[OpenAI][7] {Fore.WHITE}Password was {Fore.GREEN}correct")
             new_state = re.findall(r"state=(.*)", response.text)[0]
             new_state = new_state.split('"')[0]
             print(f"{Fore.GREEN}[OpenAI][7] {Fore.WHITE}Old state: {Fore.GREEN}{state}")
@@ -351,9 +356,9 @@ class Auth:
             soup = BeautifulSoup(response.text, 'lxml')
             # Find __NEXT_DATA__, which contains the data we need, the get accessToken
             next_data = soup.find("script", {"id": "__NEXT_DATA__"})
-            # Access Token
-            access_token = re.findall(r"accessToken\":\"(.*)\"", next_data.text)
-            if access_token:
+            if access_token := re.findall(
+                r"accessToken\":\"(.*)\"", next_data.text
+            ):
                 access_token = access_token[0]
                 access_token = access_token.split('"')[0]
                 print(f"{Fore.GREEN}[OpenAI][8] {Fore.WHITE}Access Token: {Fore.GREEN}{access_token}")
